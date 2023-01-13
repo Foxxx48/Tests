@@ -1,4 +1,4 @@
-package com.example.tests
+package com.example.module2
 
 import org.junit.Test
 
@@ -12,11 +12,6 @@ import org.junit.Assert.*
 class ExampleUnitTest {
     @Test
     fun addition_isCorrect() {
-        assertEquals(4, 2 + 2)
-    }
-
-    @Test
-    fun sum_is_correct() {
         assertEquals(4, 2 + 2)
     }
 }
