@@ -1,4 +1,6 @@
-package com.example.tests
+package com.example.tests.junittest
+
+import com.example.tests.ErrorHandler
 
 class TestErrorHandler : ErrorHandler<String> {
     private val _records = mutableListOf<Record>()

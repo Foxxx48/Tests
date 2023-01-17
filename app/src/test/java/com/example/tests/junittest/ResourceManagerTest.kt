@@ -1,5 +1,7 @@
-package com.example.tests
+package com.example.tests.junittest
 
+import com.example.tests.ErrorHandler
+import com.example.tests.ResourceManager
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.util.concurrent.Executor

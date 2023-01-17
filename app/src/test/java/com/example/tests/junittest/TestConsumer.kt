@@ -1,4 +1,6 @@
-package com.example.tests
+package com.example.tests.junittest
+
+import com.example.tests.Consumer
 
 class TestConsumer : Consumer<String> {
 
