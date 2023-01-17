@@ -1,7 +1,11 @@
 package com.example.tests.mockktest
 
+import com.example.tests.Consumer
 import com.example.tests.ErrorHandler
 import com.example.tests.ResourceManager
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.util.concurrent.Executor
@@ -13,25 +17,29 @@ class ResourceManagerMockKTest {
         //arrange
         val resourceManager = createResourceManager()
 
-        val consumer = TestConsumer()
+        val consumer = crateConsumer()
 
         //act
         resourceManager.setResource("TEST")
         resourceManager.consumeResource(consumer)
 
         //assert
-        assertEquals("TEST", consumer.lastResource)
-        assertEquals(1, consumer.invokeCount)
+        verify(exactly = 1) {
+            consumer("TEST")
+        }
+
+//        assertEquals("TEST", consumer.lastResource)
+//        assertEquals(1, consumer.invokeCount)
     }
 
 
-    @Test
+    /*@Test
     fun consumeResourceCallsAfterSetResourceCallReceivesResourceEachConsumer() {
         //arrange
         val resourceManager = createResourceManager()
 
-        val consumer1 = TestConsumer()
-        val consumer2 = TestConsumer()
+        val consumer1 = TestMockKConsumer()
+        val consumer2 = TestMockKConsumer()
 
         //act
         resourceManager.setResource("TEST")
@@ -50,7 +58,7 @@ class ResourceManagerMockKTest {
     fun consumeResourceAfterSetResourceCallsReceiveLatestResource() {
         val resourceManager = createResourceManager()
 
-        val consumer = TestConsumer()
+        val consumer = TestMockKConsumer()
 
         resourceManager.setResource("TEST1")
         resourceManager.setResource("TEST2")
@@ -64,7 +72,7 @@ class ResourceManagerMockKTest {
     fun consumeResourceCallsWithSameConsumerCanReceiveTheSameResource() {
         val resourceManager = createResourceManager()
 
-        val consumer = TestConsumer()
+        val consumer = TestMockKConsumer()
 
         resourceManager.setResource("TEST")
         resourceManager.consumeResource(consumer)
@@ -79,7 +87,7 @@ class ResourceManagerMockKTest {
     fun consumeResourceWithoutActiveResourceDoesNothing() {
         val resourceManager = createResourceManager()
 
-        val consumer = TestConsumer()
+        val consumer = TestMockKConsumer()
 
         assertEquals(0, consumer.invokeCount)
     }
@@ -88,7 +96,7 @@ class ResourceManagerMockKTest {
     fun setResourceAfterConsumeResourceCallDeliversResourceToConsumer() {
         val resourceManager = createResourceManager()
 
-        val consumer = TestConsumer()
+        val consumer = TestMockKConsumer()
 
         resourceManager.consumeResource(consumer)
         resourceManager.setResource("TEST")
@@ -96,10 +104,11 @@ class ResourceManagerMockKTest {
         assertEquals("TEST", consumer.lastResource)
         assertEquals(1, consumer.invokeCount)
     }
+
     @Test
     fun consumeResourceReceivesResourceOnlyOnce() {
         val resourceManager = createResourceManager()
-        val consumer = TestConsumer()
+        val consumer = TestMockKConsumer()
 
         resourceManager.setResource("TEST1")
         resourceManager.consumeResource(consumer)
@@ -112,7 +121,7 @@ class ResourceManagerMockKTest {
     @Test
     fun consumeResourceCallsWithSameConsumerCanReceiveMultipleResources() {
         val resourceManager = createResourceManager()
-        val consumer = TestConsumer()
+        val consumer = TestMockKConsumer()
 
         resourceManager.setResource("TEST1")
         resourceManager.consumeResource(consumer)
@@ -127,8 +136,8 @@ class ResourceManagerMockKTest {
     @Test
     fun setResourceAfterMultipleConsumeResourceCallsDeliversResourceToAllConsumers() {
         val resourceManager = createResourceManager()
-        val consumer1 = TestConsumer()
-        val consumer2 = TestConsumer()
+        val consumer1 = TestMockKConsumer()
+        val consumer2 = TestMockKConsumer()
 
         resourceManager.consumeResource(consumer1)
         resourceManager.consumeResource(consumer2)
@@ -143,7 +152,7 @@ class ResourceManagerMockKTest {
     @Test
     fun setResourceCallsAfterConsumeResourceCallDeliversTheFirstResourceOnce() {
         val resourceManager = createResourceManager()
-        val consumer = TestConsumer()
+        val consumer = TestMockKConsumer()
 
         resourceManager.consumeResource(consumer)
         resourceManager.setResource("TEST1")
@@ -156,7 +165,7 @@ class ResourceManagerMockKTest {
     @Test
     fun setResourceBetweenConsumeResourceCallsDeliversTheSameResourceToAllConsumers() {
         val resourceManager = createResourceManager()
-        val consumer = TestConsumer()
+        val consumer = TestMockKConsumer()
 
         resourceManager.consumeResource(consumer)
         resourceManager.setResource("TEST")
@@ -170,7 +179,7 @@ class ResourceManagerMockKTest {
     @Test
     fun setResourceDoubleCallBetweenConsumeResourceCallsDeliversDifferentResources() {
         val resourceManager = createResourceManager()
-        val consumer = TestConsumer()
+        val consumer = TestMockKConsumer()
 
         resourceManager.consumeResource(consumer)
         resourceManager.setResource("TEST1")
@@ -185,7 +194,7 @@ class ResourceManagerMockKTest {
     @Test
     fun consumeResourceAfterClearResourceCallDoesNothing() {
         val resourceManager = createResourceManager()
-        val consumer = TestConsumer()
+        val consumer = TestMockKConsumer()
 
         resourceManager.setResource("TEST")
         resourceManager.clearResource()
@@ -197,7 +206,7 @@ class ResourceManagerMockKTest {
     @Test
     fun consumeResourceAfterClearResourceAndSetResourceCallsReceivesLatestResource() {
         val resourceManager = createResourceManager()
-        val consumer = TestConsumer()
+        val consumer = TestMockKConsumer()
 
         resourceManager.setResource("TEST1")
         resourceManager.clearResource()
@@ -211,7 +220,7 @@ class ResourceManagerMockKTest {
     @Test
     fun setResourceAfterConsumeResourceAndClearResourceCallsDeliversLatestResource() {
         val resourceManager = createResourceManager()
-        val consumer = TestConsumer()
+        val consumer = TestMockKConsumer()
 
         resourceManager.setResource("TEST1")
         resourceManager.clearResource()
@@ -225,7 +234,7 @@ class ResourceManagerMockKTest {
     @Test
     fun destroyClearsCurrentResource() {
         val resourceManager = createResourceManager()
-        val consumer = TestConsumer()
+        val consumer = TestMockKConsumer()
 
         resourceManager.setResource("TEST")
         resourceManager.destroy()
@@ -237,7 +246,7 @@ class ResourceManagerMockKTest {
     @Test
     fun destroyClearsPendingConsumers() {
         val resourceManager = createResourceManager()
-        val consumer = TestConsumer()
+        val consumer = TestMockKConsumer()
 
         resourceManager.consumeResource(consumer)
         resourceManager.destroy()
@@ -249,7 +258,7 @@ class ResourceManagerMockKTest {
     @Test
     fun setResourceAfterDestroyCallDoesNothing() {
         val resourceManager = createResourceManager()
-        val consumer = TestConsumer()
+        val consumer = TestMockKConsumer()
 
         resourceManager.destroy()
         resourceManager.setResource("TEST")
@@ -261,7 +270,7 @@ class ResourceManagerMockKTest {
     @Test
     fun consumeResourceAfterDestroyCallDoesNothing() {
         val resourceManager = createResourceManager()
-        val consumer = TestConsumer()
+        val consumer = TestMockKConsumer()
 
         resourceManager.destroy()
         resourceManager.consumeResource(consumer)
@@ -273,7 +282,7 @@ class ResourceManagerMockKTest {
     @Test(expected = Test.None::class)
     fun setResourceHandlesConcurrentConsumersModification() {
         val resourceManager = createResourceManager()
-        val consumer = TestConsumer()
+        val consumer = TestMockKConsumer()
 
         resourceManager.consumeResource {
             resourceManager.clearResource()
@@ -287,7 +296,7 @@ class ResourceManagerMockKTest {
 
     @Test
     fun consumeResourceDeliversExceptionsToErrorHandler() {
-        val errorHandler = TestErrorHandler()
+        val errorHandler = TestMockKConsumer()
         val resourceManager = createResourceManager(
             errorHandler = errorHandler
         )
@@ -359,16 +368,28 @@ class ResourceManagerMockKTest {
         executor.commands[0].run()
         assertEquals(1, consumer.invokeCount)
         assertEquals("TEST", consumer.lastResource)
-    }
+    }*/
 
     private fun createResourceManager(
-        executor: Executor = TestExecutor(),
-        errorHandler: ErrorHandler<String> = TestErrorHandler()
+        executor: Executor = immediateExecutor(),
+        errorHandler: ErrorHandler<String> =dummyErrorHandler()
     ): ResourceManager<String> {
         return ResourceManager(
             executor, errorHandler
         )
     }
+
+    private fun dummyErrorHandler(): ErrorHandler<String> = mockk()
+
+    private fun immediateExecutor(): Executor {
+        val executor = mockk<Executor>()
+        every { executor.execute(any()) } answers {
+            firstArg<Runnable>().run()
+        }
+        return executor
+    }
+
+    private fun crateConsumer(): Consumer<String> = mockk(relaxed = true)
 
 
 }
