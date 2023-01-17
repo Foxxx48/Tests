@@ -23,11 +23,6 @@ fun main() {
         println("4: $it")
     }
 
-    // should print:
-    //  1: R1
-    //  2: R1
-    //  3: R1
-    //  4: R2
 }
 
 class ImmediateExecutor : Executor {

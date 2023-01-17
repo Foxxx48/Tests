@@ -1,7 +1,17 @@
 package com.example.tests
 
 class TestErrorHandler : ErrorHandler<String> {
+    private val _records = mutableListOf<Record>()
+    val records: List<Record> = _records
+    val invokeCount: Int get() = records.size
+
     override fun onError(exception: Exception, resource: String) {
-        TODO("Not yet implemented")
+        _records.add(Record(exception, resource))
     }
+
+    data class Record(
+        val exception: Exception,
+        val resource: String
+    )
+
 }
