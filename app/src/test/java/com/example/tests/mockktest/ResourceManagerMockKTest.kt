@@ -5,6 +5,7 @@ import com.example.tests.ErrorHandler
 import com.example.tests.ResourceManager
 import io.mockk.*
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.concurrent.Executor
 
@@ -203,98 +204,104 @@ class ResourceManagerMockKTest {
         }
     }
 
-    /*@Test
+    @Test
     fun consumeResourceAfterClearResourceCallDoesNothing() {
         val resourceManager = createResourceManager()
-        val consumer = TestMockKConsumer()
+        val consumer = createConsumer()
 
         resourceManager.setResource("TEST")
         resourceManager.clearResource()
         resourceManager.consumeResource(consumer)
 
-        assertEquals(0, consumer.invokeCount)
+        verify {
+            consumer wasNot called
+        }
     }
 
     @Test
     fun consumeResourceAfterClearResourceAndSetResourceCallsReceivesLatestResource() {
         val resourceManager = createResourceManager()
-        val consumer = TestMockKConsumer()
+        val consumer = createConsumer()
 
         resourceManager.setResource("TEST1")
         resourceManager.clearResource()
         resourceManager.setResource("TEST2")
         resourceManager.consumeResource(consumer)
 
-        assertEquals(1, consumer.invokeCount)
-        assertEquals("TEST2", consumer.lastResource)
+        verify(exactly = 1) {
+            consumer("TEST2")
+        }
+        confirmVerified(consumer)
     }
 
     @Test
     fun setResourceAfterConsumeResourceAndClearResourceCallsDeliversLatestResource() {
         val resourceManager = createResourceManager()
-        val consumer = TestMockKConsumer()
+        val consumer = createConsumer()
 
         resourceManager.setResource("TEST1")
         resourceManager.clearResource()
         resourceManager.consumeResource(consumer)
         resourceManager.setResource("TEST2")
 
-        assertEquals(1, consumer.invokeCount)
-        assertEquals("TEST2", consumer.lastResource)
+        verify(exactly = 1) {
+            consumer("TEST2")
+        }
+        confirmVerified(consumer)
     }
 
     @Test
     fun destroyClearsCurrentResource() {
         val resourceManager = createResourceManager()
-        val consumer = TestMockKConsumer()
+        val consumer = createConsumer()
 
         resourceManager.setResource("TEST")
         resourceManager.destroy()
         resourceManager.consumeResource(consumer)
 
-        assertEquals(0, consumer.invokeCount)
+        verify { consumer wasNot called }
     }
 
     @Test
     fun destroyClearsPendingConsumers() {
         val resourceManager = createResourceManager()
-        val consumer = TestMockKConsumer()
+        val consumer = createConsumer()
 
         resourceManager.consumeResource(consumer)
         resourceManager.destroy()
         resourceManager.setResource("TEST")
 
-        assertEquals(0, consumer.invokeCount)
+        verify { consumer wasNot called }
     }
 
     @Test
     fun setResourceAfterDestroyCallDoesNothing() {
         val resourceManager = createResourceManager()
-        val consumer = TestMockKConsumer()
+        val consumer = createConsumer()
 
         resourceManager.destroy()
         resourceManager.setResource("TEST")
         resourceManager.consumeResource(consumer)
 
-        assertEquals(0, consumer.invokeCount)
+        verify { consumer wasNot called }
     }
 
     @Test
     fun consumeResourceAfterDestroyCallDoesNothing() {
         val resourceManager = createResourceManager()
-        val consumer = TestMockKConsumer()
+        val consumer = createConsumer()
 
         resourceManager.destroy()
         resourceManager.consumeResource(consumer)
         resourceManager.setResource("TEST")
 
-        assertEquals(0, consumer.invokeCount)
+        verify { consumer wasNot called }
     }
 
     @Test(expected = Test.None::class)
     fun setResourceHandlesConcurrentConsumersModification() {
         val resourceManager = createResourceManager()
-        val consumer = TestMockKConsumer()
+        val consumer = createConsumer()
 
         resourceManager.consumeResource {
             resourceManager.clearResource()
@@ -302,13 +309,17 @@ class ResourceManagerMockKTest {
         }
         resourceManager.setResource("TEST")
 
-        assertEquals(1, consumer.invokeCount)
-        assertEquals("TEST", consumer.lastResource)
+        verify {
+            consumer("TEST")
+        }
+        confirmVerified(consumer)
     }
 
     @Test
     fun consumeResourceDeliversExceptionsToErrorHandler() {
-        val errorHandler = TestMockKConsumer()
+        val errorHandler: ErrorHandler<String> = mockk()
+        every { errorHandler.onError(any(), any()) } just runs
+
         val resourceManager = createResourceManager(
             errorHandler = errorHandler
         )
@@ -319,16 +330,16 @@ class ResourceManagerMockKTest {
             throw expectedException
         }
 
-        assertEquals(1, errorHandler.invokeCount)
-        assertEquals(
-            TestErrorHandler.Record(expectedException, "TEST"),
-            errorHandler.records[0]
-        )
+        verify(exactly = 1) {
+            errorHandler.onError(refEq(expectedException), "TEST")
+        }
+        confirmVerified(errorHandler)
     }
 
     @Test
     fun setResourceDeliversExceptionsToErrorHandler() {
-        val errorHandler = TestErrorHandler()
+        val errorHandler: ErrorHandler<String> = mockk()
+        every { errorHandler.onError(any(), any()) } just runs
         val resourceManager = createResourceManager(
             errorHandler = errorHandler
         )
@@ -339,48 +350,73 @@ class ResourceManagerMockKTest {
         }
         resourceManager.setResource("TEST")
 
-        assertEquals(1, errorHandler.invokeCount)
-        assertEquals(
-            TestErrorHandler.Record(expectedException, "TEST"),
-            errorHandler.records[0]
+        verify(exactly = 1) {
+            errorHandler.onError(refEq(expectedException), "TEST")
+        }
+        confirmVerified(errorHandler)
+    }
+
+    @Test
+    fun consumeResourceDoesNotInvokeConsumerOutsideOfExecutor() {
+        val executor: Executor = mockk()
+        every { executor.execute(any()) } just runs
+        val resourceManager = createResourceManager(
+            executor = executor
         )
+        val consumer = createConsumer()
+
+        resourceManager.setResource("TEST")
+        resourceManager.consumeResource(consumer)
+
+        verify(exactly = 1) {
+            executor.execute(any())
+            consumer wasNot called
+        }
+        confirmVerified(executor, consumer)
     }
 
     @Test
     fun consumeResourceInvokesConsumerInExecutor() {
-        val executor = TestExecutor(autoExec = false)
+        val executor: Executor = mockk()
+        val commandSlot = slot<Runnable>()
+        every { executor.execute(capture(commandSlot)) } just runs
         val resourceManager = createResourceManager(
             executor = executor
         )
-        val consumer = TestConsumer()
+        val consumer = createConsumer()
 
         resourceManager.setResource("TEST")
         resourceManager.consumeResource(consumer)
 
-        assertEquals(1, executor.invokeCount)
-        assertEquals(0, consumer.invokeCount)
-        executor.commands[0].run()
-        assertEquals(1, consumer.invokeCount)
-        assertEquals("TEST", consumer.lastResource)
+
+        assertTrue(commandSlot.isCaptured)
+        commandSlot.captured.run()
+        verify(exactly = 1) {
+            consumer("TEST")
+        }
+        confirmVerified(consumer)
     }
 
     @Test
     fun setResourceInvokesPendingConsumerInExecutor() {
-        val executor = TestExecutor(autoExec = false)
+        val executor: Executor = mockk()
+        val commandSlot = slot<Runnable>()
+        every { executor.execute(capture(commandSlot)) } just runs
         val resourceManager = createResourceManager(
             executor = executor
         )
-        val consumer = TestConsumer()
+        val consumer = createConsumer()
 
         resourceManager.consumeResource(consumer)
         resourceManager.setResource("TEST")
 
-        assertEquals(1, executor.invokeCount)
-        assertEquals(0, consumer.invokeCount)
-        executor.commands[0].run()
-        assertEquals(1, consumer.invokeCount)
-        assertEquals("TEST", consumer.lastResource)
-    }*/
+        assertTrue(commandSlot.isCaptured)
+        commandSlot.captured.run()
+        verify(exactly = 1) {
+            consumer("TEST")
+        }
+        confirmVerified(consumer)
+    }
 
     private fun createResourceManager(
         executor: Executor = immediateExecutor(),
