@@ -110,93 +110,100 @@ class ResourceManagerMockKTest {
         confirmVerified(consumer)
     }
 
-    /*@Test
+    @Test
     fun consumeResourceReceivesResourceOnlyOnce() {
         val resourceManager = createResourceManager()
-        val consumer = TestMockKConsumer()
+        val consumer = createConsumer()
 
         resourceManager.setResource("TEST1")
         resourceManager.consumeResource(consumer)
         resourceManager.setResource("TEST2")
 
-        assertEquals("TEST1", consumer.lastResource)
-        assertEquals(1, consumer.invokeCount)
+        verify(exactly = 1) {
+            consumer("TEST1")
+        }
+        confirmVerified(consumer)
     }
 
     @Test
     fun consumeResourceCallsWithSameConsumerCanReceiveMultipleResources() {
         val resourceManager = createResourceManager()
-        val consumer = TestMockKConsumer()
+        val consumer = createConsumer()
 
         resourceManager.setResource("TEST1")
         resourceManager.consumeResource(consumer)
         resourceManager.setResource("TEST2")
         resourceManager.consumeResource(consumer)
 
-        assertEquals("TEST1", consumer.resources[0])
-        assertEquals("TEST2", consumer.resources[1])
-        assertEquals(2, consumer.invokeCount)
+        verifySequence {
+            consumer("TEST1")
+            consumer("TEST2")
+        }
     }
 
     @Test
     fun setResourceAfterMultipleConsumeResourceCallsDeliversResourceToAllConsumers() {
         val resourceManager = createResourceManager()
-        val consumer1 = TestMockKConsumer()
-        val consumer2 = TestMockKConsumer()
+        val consumer1 = createConsumer()
+        val consumer2 = createConsumer()
 
         resourceManager.consumeResource(consumer1)
         resourceManager.consumeResource(consumer2)
         resourceManager.setResource("TEST")
 
-        assertEquals("TEST", consumer1.lastResource)
-        assertEquals("TEST", consumer2.lastResource)
-        assertEquals(1, consumer1.invokeCount)
-        assertEquals(1, consumer2.invokeCount)
+        verifySequence {
+            consumer1("TEST")
+            consumer2("TEST")
+        }
     }
 
     @Test
     fun setResourceCallsAfterConsumeResourceCallDeliversTheFirstResourceOnce() {
         val resourceManager = createResourceManager()
-        val consumer = TestMockKConsumer()
+        val consumer = createConsumer()
 
         resourceManager.consumeResource(consumer)
         resourceManager.setResource("TEST1")
         resourceManager.setResource("TEST2")
 
-        assertEquals(1, consumer.invokeCount)
-        assertEquals("TEST1", consumer.lastResource)
+        verify(exactly = 1) {
+            consumer("TEST1")
+        }
+        confirmVerified(consumer)
     }
 
     @Test
     fun setResourceBetweenConsumeResourceCallsDeliversTheSameResourceToAllConsumers() {
         val resourceManager = createResourceManager()
-        val consumer = TestMockKConsumer()
+        val consumer = createConsumer()
 
         resourceManager.consumeResource(consumer)
         resourceManager.setResource("TEST")
         resourceManager.consumeResource(consumer)
 
-        assertEquals(2, consumer.invokeCount)
-        assertEquals("TEST", consumer.resources[0])
-        assertEquals("TEST", consumer.resources[1])
+        verify(exactly = 2) {
+            consumer("TEST")
+        }
+        confirmVerified(consumer)
     }
 
     @Test
     fun setResourceDoubleCallBetweenConsumeResourceCallsDeliversDifferentResources() {
         val resourceManager = createResourceManager()
-        val consumer = TestMockKConsumer()
+        val consumer = createConsumer()
 
         resourceManager.consumeResource(consumer)
         resourceManager.setResource("TEST1")
         resourceManager.setResource("TEST2")
         resourceManager.consumeResource(consumer)
 
-        assertEquals(2, consumer.invokeCount)
-        assertEquals("TEST1", consumer.resources[0])
-        assertEquals("TEST2", consumer.resources[1])
+        verifySequence {
+            consumer("TEST1")
+            consumer("TEST2")
+        }
     }
 
-    @Test
+    /*@Test
     fun consumeResourceAfterClearResourceCallDoesNothing() {
         val resourceManager = createResourceManager()
         val consumer = TestMockKConsumer()
