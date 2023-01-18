@@ -3,10 +3,7 @@ package com.example.tests.mockktest
 import com.example.tests.Consumer
 import com.example.tests.ErrorHandler
 import com.example.tests.ResourceManager
-import io.mockk.confirmVerified
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.verify
+import io.mockk.*
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.util.concurrent.Executor
@@ -18,7 +15,7 @@ class ResourceManagerMockKTest {
         //arrange
         val resourceManager = createResourceManager()
 
-        val consumer = crateConsumer()
+        val consumer = createConsumer()
 
         //act
         resourceManager.setResource("TEST")
@@ -32,13 +29,13 @@ class ResourceManagerMockKTest {
     }
 
 
-    /*@Test
+    @Test
     fun consumeResourceCallsAfterSetResourceCallReceivesResourceEachConsumer() {
         //arrange
         val resourceManager = createResourceManager()
 
-        val consumer1 = TestMockKConsumer()
-        val consumer2 = TestMockKConsumer()
+        val consumer1 = createConsumer()
+        val consumer2 = createConsumer()
 
         //act
         resourceManager.setResource("TEST")
@@ -47,64 +44,73 @@ class ResourceManagerMockKTest {
 
 
         //assert
-        assertEquals("TEST", consumer1.lastResource)
-        assertEquals(1, consumer1.invokeCount)
-        assertEquals("TEST", consumer2.lastResource)
-        assertEquals(1, consumer2.invokeCount)
+
+        verifySequence {
+            consumer1("TEST")
+            consumer2("TEST")
+        }
+
     }
 
     @Test
     fun consumeResourceAfterSetResourceCallsReceiveLatestResource() {
         val resourceManager = createResourceManager()
 
-        val consumer = TestMockKConsumer()
+        val consumer = createConsumer()
 
         resourceManager.setResource("TEST1")
         resourceManager.setResource("TEST2")
         resourceManager.consumeResource(consumer)
 
-        assertEquals("TEST2", consumer.lastResource)
-        assertEquals(1, consumer.invokeCount)
+        verify(exactly = 1) {
+            consumer("TEST2")
+        }
+        confirmVerified(consumer)
     }
 
     @Test
     fun consumeResourceCallsWithSameConsumerCanReceiveTheSameResource() {
         val resourceManager = createResourceManager()
 
-        val consumer = TestMockKConsumer()
+        val consumer = createConsumer()
 
         resourceManager.setResource("TEST")
         resourceManager.consumeResource(consumer)
         resourceManager.consumeResource(consumer)
 
-        assertEquals("TEST", consumer.resources[0])
-        assertEquals("TEST", consumer.resources[1])
-        assertEquals(2, consumer.invokeCount)
+        verify(exactly = 2) {
+            consumer("TEST")
+        }
+        confirmVerified(consumer)
     }
 
     @Test
     fun consumeResourceWithoutActiveResourceDoesNothing() {
         val resourceManager = createResourceManager()
 
-        val consumer = TestMockKConsumer()
+        val consumer = createConsumer()
 
-        assertEquals(0, consumer.invokeCount)
+        verify() {
+            consumer wasNot called
+        }
     }
 
     @Test
     fun setResourceAfterConsumeResourceCallDeliversResourceToConsumer() {
         val resourceManager = createResourceManager()
 
-        val consumer = TestMockKConsumer()
+        val consumer = createConsumer()
 
         resourceManager.consumeResource(consumer)
         resourceManager.setResource("TEST")
 
-        assertEquals("TEST", consumer.lastResource)
-        assertEquals(1, consumer.invokeCount)
+        verify(exactly = 1) {
+            consumer("TEST")
+        }
+        confirmVerified(consumer)
     }
 
-    @Test
+    /*@Test
     fun consumeResourceReceivesResourceOnlyOnce() {
         val resourceManager = createResourceManager()
         val consumer = TestMockKConsumer()
@@ -371,7 +377,7 @@ class ResourceManagerMockKTest {
 
     private fun createResourceManager(
         executor: Executor = immediateExecutor(),
-        errorHandler: ErrorHandler<String> =dummyErrorHandler()
+        errorHandler: ErrorHandler<String> = dummyErrorHandler()
     ): ResourceManager<String> {
         return ResourceManager(
             executor, errorHandler
@@ -388,7 +394,7 @@ class ResourceManagerMockKTest {
         return executor
     }
 
-    private fun crateConsumer(): Consumer<String> = mockk(relaxed = true)
+    private fun createConsumer(): Consumer<String> = mockk(relaxed = true)
 
 
 }
