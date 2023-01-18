@@ -3,6 +3,7 @@ package com.example.tests.mockktest
 import com.example.tests.Consumer
 import com.example.tests.ErrorHandler
 import com.example.tests.ResourceManager
+import io.mockk.confirmVerified
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -27,9 +28,7 @@ class ResourceManagerMockKTest {
         verify(exactly = 1) {
             consumer("TEST")
         }
-
-//        assertEquals("TEST", consumer.lastResource)
-//        assertEquals(1, consumer.invokeCount)
+        confirmVerified(consumer)
     }
 
 
